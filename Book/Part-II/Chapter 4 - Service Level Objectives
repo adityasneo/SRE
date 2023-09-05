@@ -17,6 +17,7 @@ Agreements
 Finally, SLAs are service level agreements: an explicit or implicit contract with your users that includes consequences of meeting (or missing) the SLOs they contain. The consequences are most easily recognized when they are financial—a rebate or a penalty—but they can take other forms
 
 Indicators in Practice
+the case for why choosing appropriate metrics to measure your service is important, how do you go about identifying what metrics are meaningful to your service or system?
 What Do You and Your Users Care About?
 
 Services tend to fall into a few broad categories in terms of the SLIs they find relevant:
@@ -25,3 +26,72 @@ User-facing serving systems, such as the Shakespeare search frontends, generally
 Storage systems often emphasize latency, availability, and durability. In other words: How long does it take to read or write data? Can we access the data on demand? Is the data still there when we need it? See Data Integrity: What You Read Is What You Wrote for an extended discussion of these issues.
 Big data systems, such as data processing pipelines, tend to care about throughput and end-to-end latency. In other words: How much data is being processed? How long does it take the data to progress from ingestion to completion? (Some pipelines may also have targets for latency on individual processing stages.)
 All systems should care about correctness: was the right answer returned, the right data retrieved, the right analysis done? Correctness is important to track as an indicator of system health, even though it’s often a property of the data in the system rather than the infrastructure per se, and so usually not an SRE responsibility to meet
+
+Collecting Indicators
+Many indicator metrics are most naturally gathered on the server side, using a monitoring system such as Borgmon (see Practical Alerting from Time-Series Data) or Prometheus, or with periodic log analysis—for instance, HTTP 500 responses as a fraction of all requests. However, some systems should be instrumented with client-side collection, because not measuring behavior at the client can miss a range of problems that affect users but don’t affect server-side metrics
+
+Aggregation
+
+Standardize Indicators
+We recommend that you standardize on common definitions for SLIs so that you don’t have to reason about them from first principles each time. Any feature that conforms to the standard definition templates can be omitted from the specification of an individual SLI, e.g.:
+
+Aggregation intervals: “Averaged over 1 minute”
+Aggregation regions: “All the tasks in a cluster”
+How frequently measurements are made: “Every 10 seconds”
+Which requests are included: “HTTP GETs from black-box monitoring jobs”
+How the data is acquired: “Through our monitoring, measured at the server”
+Data-access latency: “Time to last byte”
+To save effort, build a set of reusable SLI templates for each common metric; these also make it simpler for everyone to understand what a specific SLI means
+
+Defining Objectives
+For maximum clarity, SLOs should specify how they’re measured and the conditions under which they’re valid. For instance, we might say the following (the second line is the same as the first, but relies on the SLI defaults of the previous section to remove redundancy):
+
+99% (averaged over 1 minute) of Get RPC calls will complete in less than 100 ms (measured across all the backend servers).
+99% of Get RPC calls will complete in less than 100 ms.
+If the shape of the performance curves are important, then you can specify multiple SLO targets:
+
+90% of Get RPC calls will complete in less than 1 ms.
+99% of Get RPC calls will complete in less than 10 ms.
+99.9% of Get RPC calls will complete in less than 100 ms.
+If you have users with heterogeneous workloads such as a bulk processing pipeline that cares about throughput and an interactive client that cares about latency, it may be appropriate to define separate objectives for each class of workload:
+
+95% of throughput clients’ Set RPC calls will complete in < 1 s.
+99% of latency clients’ Set RPC calls with payloads < 1 kB will complete in < 10 ms.
+
+Choosing Targets
+Choosing targets (SLOs) is not a purely technical activity because of the product and business implications, which should be reflected in both the SLIs and SLOs (and maybe SLAs) that are selected. Similarly, it may be necessary to trade off certain product attributes against others within the constraints posed by staffing, time to market, hardware availability, and funding. While SRE should be part of this conversation, and advise on the risks and viability of different options, we’ve learned a few lessons that can help make this a more productive discussion:
+
+Don’t pick a target based on current performance
+While understanding the merits and limits of a system is essential, adopting values without reflection may lock you into supporting a system that requires heroic efforts to meet its targets, and that cannot be improved without significant redesign.
+Keep it simple
+Complicated aggregations in SLIs can obscure changes to system performance, and are also harder to reason about.
+Avoid absolutes
+While it’s tempting to ask for a system that can scale its load "infinitely" without any latency increase and that is "always" available, this requirement is unrealistic. Even a system that approaches such ideals will probably take a long time to design and build, and will be expensive to operate—and probably turn out to be unnecessarily better than what users would be happy (or even delighted) to have.
+Have as few SLOs as possible
+Choose just enough SLOs to provide good coverage of your system’s attributes. Defend the SLOs you pick: if you can’t ever win a conversation about priorities by quoting a particular SLO, it’s probably not worth having that SLO.17 However, not all product attributes are amenable to SLOs: it’s hard to specify "user delight" with an SLO.
+Perfection can wait
+You can always refine SLO definitions and targets over time as you learn about a system’s behavior. It’s better to start with a loose target that you tighten than to choose an overly strict target that has to be relaxed when you discover it’s unattainable.
+SLOs can—and should—be a major driver in prioritizing work for SREs and product developers, because they reflect what users care about. A good SLO is a helpful, legitimate forcing function for a development team. But a poorly thought-out SLO can result in wasted work if a team uses heroic efforts to meet an overly aggressive SLO, or a bad product if the SLO is too lax. SLOs are a massive lever: use them wisely.
+
+Control Measures
+SLIs and SLOs are crucial elements in the control loops used to manage systems:
+
+Monitor and measure the system’s SLIs.
+Compare the SLIs to the SLOs, and decide whether or not action is needed.
+If action is needed, figure out what needs to happen in order to meet the target.
+Take that action.
+For example, if step 2 shows that request latency is increasing, and will miss the SLO in a few hours unless something is done, step 3 might include testing the hypothesis that the servers are CPU-bound, and deciding to add more of them to spread the load. Without the SLO, you wouldn’t know whether (or when) to take action.
+
+SLOs Set Expectations
+Publishing SLOs sets expectations for system behavior. Users (and potential users) often want to know what they can expect from a service in order to understand whether it’s appropriate for their use case. For instance, a team wanting to build a photo-sharing website might want to avoid using a service that promises very strong durability and low cost in exchange for slightly lower availability, though the same service might be a perfect fit for an archival records management system.
+
+In order to set realistic expectations for your users, you might consider using one or both of the following tactics:
+
+Keep a safety margin
+Using a tighter internal SLO than the SLO advertised to users gives you room to respond to chronic problems before they become visible externally. An SLO buffer also makes it possible to accommodate reimplementations that trade performance for other attributes, such as cost or ease of maintenance, without having to disappoint users.
+Don’t overachieve
+Users build on the reality of what you offer, rather than what you say you’ll supply, particularly for infrastructure services. If your service’s actual performance is much better than its stated SLO, users will come to rely on its current performance. You can avoid over-dependence by deliberately taking the system offline occasionally (Google’s Chubby service introduced planned outages in response to being overly available),18 throttling some requests, or designing the system so that it isn’t faster under light loads.
+Understanding how well a system is meeting its expectations helps decide whether to invest in making the system faster, more available, and more resilient. Alternatively, if the service is doing fine, perhaps staff time should be spent on other priorities, such as paying off technical debt, adding new features, or introducing other products
+
+Agreements in Practice
+Crafting an SLA requires business and legal teams to pick appropriate consequences and penalties for a breach. SRE’s role is to help them understand the likelihood and difficulty of meeting the SLOs contained in the SLA. Much of the advice on SLO construction is also applicable for SLAs. It is wise to be conservative in what you advertise to users, as the broader the constituency, the harder it is to change or delete SLAs that prove to be unwise or difficult to work with
