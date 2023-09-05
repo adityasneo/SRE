@@ -1,0 +1,33 @@
+Principles
+Chapter-3
+Embracing Risk
+Managing Risk
+Measuring Service Risk
+Time-based availability
+Aggregate availability
+
+Risk Tolerance of Services
+
+Identifying the Risk Tolerance of Consumer Services
+There are many factors to consider when assessing the risk tolerance of services, such as the following:
+What level of availability is required?
+Do different types of failures have different effects on the service?
+How can we use the service cost to help locate a service on the risk continuum?
+What other service metrics are important to take into account?
+
+Target level of availability
+The target level of availability for a given Google service usually depends on the function it provides and how the service is positioned in the marketplace. The following list includes issues to consider:
+
+What level of service will the users expect?
+Does this service tie directly to revenue (either our revenue, or our customers’ revenue)?
+Is this a paid service, or is it free?
+If there are competitors in the marketplace, what level of service do those competitors provide?
+Is this service targeted at consumers, or at enterprises?
+
+Types of failures
+
+Cost
+Cost is often the key factor in determining the appropriate availability target for a service. Ads is in a particularly good position to make this trade-off because request successes and failures can be directly translated into revenue gained or lost. In determining the availability target for each service, we ask questions such as:
+
+If we were to build and operate these systems at one more nine of availability, what would our incremental increase in revenue be?
+Does this additional revenue offset the cost of reaching that level of reliability?
