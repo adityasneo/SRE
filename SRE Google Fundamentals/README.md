@@ -13,3 +13,9 @@ SRE Terms
 SRE DevOps
 
 <img width="494" alt="image" src="https://github.com/adityasneo/SRE/assets/128022129/5daf41fb-8242-475a-bd63-6b9cad9b4ea5">
+
+Reliability
+
+<img width="495" alt="image" src="https://github.com/adityasneo/SRE/assets/128022129/25d1d60e-0046-4daf-819b-30208a9d8243">
+
+
